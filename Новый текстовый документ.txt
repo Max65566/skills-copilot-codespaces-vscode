@@ -1,0 +1,1662 @@
+local apiName = "buttonAPI.lua"
+local pasteLink = "V6Nuxuuy"
+local infoName = "info"
+ 
+ 
+if not fs.exists(apiName) then
+   shell.run("pastebin get " .. pasteLink .. " " .. apiName)   --downloads the API
+end
+ 
+os.loadAPI(apiName)
+peripheral.find("modem", rednet.open)
+monitor = peripheral.find("monitor")
+monitor.setTextScale(0.5)
+monitor.clear()
+ 
+local monitorWidth, monitorHeight = monitor.getSize()
+if monitorWidth >= 36 and monitorHeight >= 24 then   --changes text scale depending on the monitor size
+   monitor.setTextScale(0.5)
+   monitorWidth, monitorHeight = monitor.getSize()
+end
+ 
+
+term.clear()
+monitor.setCursorPos(1,1)
+
+Error_Text = {"Gate Not Idle!","Error, Address not found!","Error Invalid Symbol!","Error Outside Range!","Error Command Not Found!", "Aborting"}
+
+jump_forward = false
+Dur = "0"
+max_address_width = 0
+gate_time = 0
+extra = 0
+busy = false
+Alarm_Show = false
+redstone_Avail = false
+Override = false
+Alarm_Enable = false
+Alarm_State_Bool = false
+Sent = false
+Sent2 = false
+from = ""
+message = ""
+printed_state = ""
+menu_pos = 0
+offset = 0
+Beamer_Bool = false
+Beamer_redial = false
+dialing_out = false
+beamer_dial_in = false
+b = monitorWidth
+l = monitorHeight
+user_address_input = {}
+place_holder = 0
+Valid_Symbols_MW = {"Point of Origin","Crater","Virgo","Bootes","Centaurus","Libra","Serpens Caput","Norma","Scorpius","Corona Australis","Scutum","Sagittarius","Aquila","Microscopium","Capricornus","Piscis Austrinus","Equuleus","Aquarius","Pegasus","Sculptor","Pisces","Andromeda","Triangulum","Aries","Perseus","Cetus","Taurus","Auriga","Eridanus","Orion","Canis Minor","Monoceros","Gemini","Hydra","Lynx","Cancer","Sextans","Leo Minor","Leo"}
+Valid_Symbols_PG = {"Aaxel","Abrin","Acjesis","Aldeni","Alura","Amiwill","Arami","Avoniv","Baselai","Bydo","Ca Po","Danami","Dawnre","Ecrumig","Elenami","Gilltin","Hacemill","Hamlinto","Illume","Laylox","Lenchan","Olavii","Once El","Poco Re","Ramnon","Recktic","Robandus","Roehi","Salma","Sandovi","Setas","Sibbron","Tahnan","Zamilloz","Zeo"}
+Valid_Symbols_UN = {"G1","G2","G3","G4","G5","G6","G7","G8","G9","G10","G11","G12","G13","G14","G15","G16","G17","G18","G19","G20","G21","G22","G23","G24","G25","G26","G27","G28","G29","G30","G31","G32","G33","G34","G35","G36"}
+max_gate_time = 5  --min
+max_gate_time_sec = max_gate_time * 60
+current_gate_time = 0
+dial_print_offset = 0
+dial_print_vertical_offset = 0
+f = 0
+num = 0
+inv = false
+engage = false
+Sent_B = false
+iris_open_bool = false
+Energy = 0
+current_glyph = ""
+
+if peripheral.find("drive") then
+	m = peripheral.find("modem")
+	m.closeAll()
+else
+	monitor.setCursorPos(1,1)
+	monitor.write("No Modem Found")
+	os.sleep(5)
+end
+
+
+if peripheral.find("drive") then
+	drive = peripheral.find("drive")
+	if not drive.isDiskPresent() then
+		monitor.setCursorPos(1,1)
+		monitor.write("No Disk Found")
+		os.sleep(5)
+		return
+	end
+end
+
+if not fs.exists("Close_Mode.txt") then
+	local file=fs.open("Close_Mode.txt","w")
+	local text = "normal"
+	file.write(textutils.serialize(text))
+	file.close()
+end
+
+if fs.exists("Dialer_Version.txt") then
+	local file = fs.open("Dialer_Version.txt","r")
+	local text = file.readAll()
+	header = textutils.unserialize(text)
+	file.close()
+else
+    header = "Evil's Dialer Version UNKNOWN!"
+end
+if fs.exists("disk/DHD_MODE.txt") then
+	file = fs.open("disk/DHD_MODE.txt","r")
+	text = file.readAll()
+	dhd = textutils.unserialize(text)
+	file.close()
+else
+	local file=fs.open("disk/DHD_MODE.txt","w")
+	local text = false
+	file.write(textutils.serialize(text))
+	dhd = text
+	file.close()
+end
+if not fs.exists("disk/Address.txt") then
+	file = fs.open("disk/Address.txt","w")
+	local text = {}
+	file.write(textutils.serialize(text))
+	file.close()
+end
+if fs.exists("disk/IRIS_MODE.txt") then
+	file = fs.open("disk/IRIS_MODE.txt","r")
+	Iris_mode = file.readAll()
+	Iris_mode_hold = Iris_mode
+	file.close()
+else
+	local file=fs.open("disk/IRIS_MODE.txt","w")
+	Iris_mode = "normal"
+	file.write(Iris_mode)
+	Iris_mode_hold = Iris_mode
+	file.close()
+end
+
+
+
+if not fs.exists("disk/IRIS_CODE.txt") then
+	local file=fs.open("disk/IRIS_CODE.txt","w")
+	::code_restart::
+	code = math.random(9999)
+	if code < 1000 then
+		goto code_restart
+	end
+	file.write(code)
+	file.close()
+end
+
+
+if not fs.exists("disk/Auto_Beamer_CODE.txt") then
+	local file=fs.open("disk/Auto_Beamer_CODE.txt","w")
+	::code2_restart::
+	code2 = math.random(9999)
+	if code2 < 1000 then
+		goto code2_restart
+	end
+	file.write(code2)
+	file.close()
+end
+
+if not fs.exists("disk/Auto_Beamer_Address.txt") then
+	file=fs.open("disk/Auto_Beamer_Address.txt","w")
+	Beamer_Address = {"blank","blank","blank","blank","blank","blank","blank","blank","blank","Beamer"}
+	file.write(textutils.serialize(Beamer_Address))
+	file.close()
+end
+
+if not fs.exists("disk/This_Gate_Address.txt") then
+	file=fs.open("disk/This_Gate_Address.txt","w")
+	Beamer_Address = {"blank"}
+	file.write(textutils.serialize(Beamer_Address))
+	file.close()
+end
+
+
+Abort = false
+Redstone_Override = false
+monitor.setCursorPos(1,1)
+
+Print_table = {}
+local table1 = {}
+gate_address = {"blank","blank","blank","blank","blank","blank","blank","blank","blank","blank"}
+code = 1
+code2 = 1
+
+v = 1
+k = 1
+xs = 0
+ys = 0
+loop = true
+buttonStatus = false
+button = true
+dialing = false
+dialed = 1
+p = 0
+lock = false
+input = "null"
+B = false
+C = false
+toggle_int_1 = 0
+toggle_int_2 = 0
+--alarm_int = 0
+broadcasting = false
+time_start = 0
+beamer_gate_type = ""
+redstone_Avail = true
+
+
+
+
+if not fs.exists("AlarmAPI.lua") then
+	fs.delete("AlarmAPI.lua")
+	shell.run("pastebin get TYvMmCRb AlarmAPI.lua")
+end
+
+
+
+if not peripheral.find("stargate") then
+  io.stderr:write("Dialer requires a Stargate!\n")
+  os.sleep(5)
+  return
+else
+	sg = peripheral.find("stargate")
+	gate_type = sg.getGateType()
+end
+
+if peripheral.find("speaker") then
+	Alarm_Enable = true
+	Alarm_Show = true
+	--A_API = require("AlarmAPI")
+end
+
+
+if not peripheral.find("jsg:dhd_milkyway") then
+	dhd = false
+	p_dhd = peripheral.wrap("jsg:dhd_milkyway_0")
+end
+	
+
+-------------------------------------------
+
+::top::
+
+
+
+function buttonAPI.fillTable()
+  buttonAPI.setTable("Abort", Button6, 1,7,monitorHeight-5,monitorHeight-3)
+  buttonAPI.setTable("Redial", Button1, 8,15,monitorHeight-5,monitorHeight-3)
+  buttonAPI.setTable("Dial", Button3, 9,15,monitorHeight-8,monitorHeight-6)
+  buttonAPI.setTable("Iris Override", Button2, 1,15,monitorHeight-2,monitorHeight)
+  buttonAPI.setTable("reboot", Button4, monitorWidth-7,monitorWidth,monitorHeight-2,monitorHeight)
+  buttonAPI.setTable("quit", Button5, monitorWidth-14,monitorWidth-8,monitorHeight-2,monitorHeight)
+  --buttonAPI.setTable("buffer", Button7, 66,72,17,19)
+  --buttonAPI.setTable("Auto Beamer", Button12, monitorWidth-14,monitorWidth,monitorHeight-5,monitorHeight-3)
+  if Alarm_Show then buttonAPI.setTable("Alarm", Button8,monitorWidth-14,monitorWidth-8,monitorHeight-8,monitorHeight-6) end
+  buttonAPI.setTable("Update", Button9,1,8,monitorHeight-8,monitorHeight-6)
+  --buttonAPI.setTable("Save", Button10,53,58,22,24)
+  buttonAPI.setTable("Manuel", Button11,monitorWidth-7,monitorWidth,monitorHeight-8,monitorHeight-6)
+  buttonAPI.setTable("Add Address", Button1_3,monitorWidth-14,monitorWidth,monitorHeight-5,monitorHeight-3)
+  buttonAPI.screen()
+end
+
+
+
+
+function auto_beamer()
+--[[
+	if not m.isOpen(code2) then
+		Beamer_Code_Read()
+		m.open(code2)
+	end
+	event.listen("modem_message",backward)
+	]]
+end
+
+function backward(event,rec_addr,from,port,distance,message)
+	if message == "Activating gate" then
+		v, k = monitor.getCursorPos()
+		monitor.setCursorPos(20,1)
+		monitor.write(message)
+		monitor.setCursorPos(v,k)
+		Override = true
+		Button6()
+	end
+	if message == "Type" then
+		m.broadcast(code2, gate_type)
+	end
+	if message == "Milky Way" then
+		beamer_gate_type = message
+		type_not_received = false
+	end
+	if message == "Pegasus" then
+		beamer_gate_type = message
+		type_not_received = false
+	end
+	if message == "Universe" then
+		beamer_gate_type = message
+		type_not_received = false
+	end
+	message_unserialized = textutils.unserialize(message)
+	if message_unserialized[10] == "Send" then 
+		m.broadcast(code2, "Activating gate")
+		iris_open_bool = true
+		--Sent2 = true
+		v, k = monitor.getCursorPos()
+		monitor.setCursorPos(5,5)
+		monitor.write("Data From: Auto Beamer, Command: " .. message_unserialized[10])
+		monitor.write("Address: " .. message)
+		monitor.setCursorPos(v,k)
+		Abort = false
+		input = "Beamer"
+		button = false
+		gate_address = {}
+		gate_address = message_unserialized
+		Print_table = message_unserialized
+		time_start = 0
+		broadcasting = true
+		while sg.getGateStatus() ~= "idle" do os.sleep(0.1) end
+		screen_reset_full()
+	end
+	if message == "Deactivating" then
+		v, k = monitor.getCursorPos()
+		monitor.setCursorPos(20,2)
+		monitor.write(message)
+		monitor.setCursorPos(v,k)
+	end
+	if message == "Close" then
+		time_start = 1000
+		monitor.setCursorPos(1,5)
+		m.broadcast(code, "Deactivating")
+		monitor.write("Deactivating")
+		sg.disengageGate()
+		monitor.setCursorPos(v,k)
+	end
+	if message == "Open" then 
+		m.broadcast(code, "Iris State: Open")
+		Sent = true
+		Override = true
+		iris_open_bool = false
+		monitor.write("Data From: " .. from .. ", Command: " .. message)
+	end
+	message = ""
+end
+
+function gate_status()
+	if sg.getGateStatus() == "dialing" then
+		dialing_out = true
+	end
+	if sg.getGateStatus() == "incoming" then 
+		if sg.getIrisState() == "OPENED" then
+			sg.toggleIris()
+		end
+	end
+	if sg.getGateStatus() ~= "idle" then
+		Iris(false,Override)
+	else
+		Iris(true,Override)
+	end
+end
+
+function Iris(B,C)
+	if Iris_mode == "normal" then
+		if C == true then
+			if sg.getIrisState() == "CLOSED" then 
+				sg.toggleIris()
+			end
+		else
+			if B == true then 
+				if sg.getIrisState() == "CLOSED" then 
+					sg.toggleIris()
+				end
+			else
+				if sg.getIrisState() == "OPENED" then
+					sg.toggleIris()
+				end
+			end
+		end
+	else
+		if sg.getIrisState() == "OPENED" then 
+			sg.toggleIris()
+		end
+	end
+end
+
+function set_alarm()
+	if Alarm_Enable then
+		if sg.getGateStatus() ~= "idle" then
+			----A_API.SetAlarm(true)
+			--alarm.activate()
+		else
+			if not dialing then
+				----A_API.SetAlarm(false)
+				--alarm.deactivate()
+			end
+		end
+	end
+end
+
+
+function Button1()
+	busy = true
+	Abort = false
+	input = "redial"
+	button = false
+	busy = false
+end
+
+function Button2()
+	busy = true
+	toggle_int_1 = toggle_int_1 - 1
+	if toggle_int_1 <= 0 then
+		toggle_int_1 = 1
+		Override = not Override
+		buttonAPI.toggleButton("Iris Override")
+	end
+	busy = false
+end
+
+function Button3()
+	busy = true
+	if sg.getGateStatus() == "idle" then
+		buttonAPI.clearTable()
+		buttonAPI.fillTable()
+		buttonAPI.heading(header)
+		menu_pos = 0
+		offset = 0
+		Address_Read()
+		looking = true
+		name_pos = 10
+		while looking do
+			os.sleep(0.1)
+			if gate_address[name_pos] == nil then
+				looking = false
+				num_addresses = (name_pos / 10) - 1
+			end
+			name_pos = name_pos + 10
+		end
+		
+		v, k = monitor.getCursorPos()
+		monitor.setCursorPos(1,1)
+		monitor.write("Addresses: ")
+		if num_addresses > 20 then 
+			f = (num_addresses / 2) + 1
+		else
+			f = 10
+		end
+		for i = 1, num_addresses do
+			if i > f then
+				dial_print_offset = max_address_width
+				dial_print_vertical_offset = f
+			end
+			monitor.setCursorPos(1 + dial_print_offset,2 + menu_pos - dial_print_vertical_offset)
+			menu_pos = menu_pos + 1
+			monitor.write(gate_address[(menu_pos) * 10])
+			if max_address_width < string.len(gate_address[(menu_pos) * 10]) + 2 then
+				max_address_width = string.len(gate_address[(menu_pos) * 10]) + 2
+			end
+		end
+		dial_print_offset = 0
+		dial_print_vertical_offset = 0
+		monitor.setCursorPos(v,k)
+		
+		-- button code
+		data = nil
+		getClick2()
+		
+		
+		
+		--local data = io.read()
+		buttonAPI.clearTable()
+		buttonAPI.fillTable()
+		buttonAPI.heading(header)
+		looking2 = true
+		name_pos = 0
+		while looking2 do
+			os.sleep(0.1)
+			if name_pos > (num_addresses + 1) * 10 then
+				print_error(2)
+				looking2 = false
+				busy = false
+				return
+			end
+			if gate_address[name_pos] == data then
+				looking2 = false
+				offset = name_pos - 10
+				Abort = false
+				input = "disk"
+				button = false
+				busy = false
+				return
+			end
+			name_pos = name_pos + 10
+		end
+		os.sleep(0.5)
+		busy = false
+	else
+		print_error(1)
+		return
+	end
+	busy = false
+end
+
+function Button4()
+	busy = true
+	term.clear()
+	buttonAPI.clearTable()
+	buttonAPI.fillTable()
+	buttonAPI.heading(header)
+	os.reboot()
+	busy = false
+end
+
+function Button5()
+	busy = true
+    term.clear()
+	file=fs.open("Close_Mode.txt","w")
+	text = "quit"
+	file.write(text)
+	file.close()
+	buttonAPI.clearTable()
+	os.exit()
+	busy = false
+end
+
+function Button6()
+	jump_forward = true
+	busy = true
+	--m.open(code2)
+	--m.broadcast(code2, "Close")
+	--m.open(code)
+	--m.broadcast(code, "Close")
+	broadcasting = false
+	Beamer_Code_Read()
+    Abort = true
+	print_error(6)
+	if peripheral.find("speaker") then
+		--A_API.SetAlarm(false)
+		os.sleep(1)
+		--A_API.SetAlarm(false)
+	end
+	os.sleep(0.1) 
+	sg.abortDialing()
+	sg.disengageGate()
+	buttonAPI.clearTable()
+	buttonAPI.fillTable()
+	buttonAPI.heading(header)
+	lock = false
+	input = "null"
+	dialing = false
+	button = true
+	dialed = 1
+	redial = false
+	buffer_set = false
+	monitor.setCursorPos(0,5)
+	if Alarm_Enable then
+		buttonAPI.toggleButton("Alarm")
+	end
+	os.sleep(1) 
+	print_error(0)
+	busy = false
+end
+
+function Button7()
+	busy = true
+	Abort = false
+	input = "buffer"
+	button = false
+	User_Input()
+	busy = false
+end
+
+function Button8()
+	busy = true
+ 	toggle_int_2 = toggle_int_2 - 1
+	if toggle_int_2 <= 0 then
+		toggle_int_2 = 2
+		Alarm_Enable = not Alarm_Enable
+		set_alarm()
+		buttonAPI.toggleButton("Alarm")
+	end
+	busy = false
+end
+
+function Button9()
+	busy = true
+    term.clear()
+	file=fs.open("Close_Mode.txt","w")
+	text = "update"
+	file.write(text)
+	file.close()
+	buttonAPI.clearTable()
+	os.exit()
+	busy = false
+end
+
+function Button10()
+	busy = true
+	monitor.setCursorPos(1,1)
+	monitor.write("Saving Last Address")
+	Save_Last_Address()
+	busy = false
+end
+function Button11()
+	screen_reset_full()
+	::Manuel_Top::
+	busy = true
+	monitor.setCursorPos(1,1)
+	monitor.write("Input Function Command:")
+	monitor.setCursorPos(1,2)
+	monitor.write("Commands: DHD, GateType, SetAddress")
+	monitor.setCursorPos(1,3)
+	local data = io.read()
+	if data == "GateType" then
+		monitor.write(gate_type)
+		goto Manuel_Top
+	end
+	if data == "DHD" then 
+		dhd = not dhd
+		if not peripheral.find("jsg:dhd_milkyway") then
+			dhd = false
+		end
+		if dhd then
+			monitor.write("DHD Mode: True")
+		else
+			monitor.write("DHD Mode: False")
+		end
+		file=fs.open("disk/DHD_MODE.txt","w")
+		text = dhd
+		file.write(textutils.serialize(text))
+		file.close()
+		goto Manuel_Top
+	end
+	if data == "SetAddress" then
+		term.clear()
+		save_this_address = true
+		Button1_3()
+		goto Manuel_Top
+	end
+	if data == "B_S_Address" then
+		if gate_type == "Milky Way" then
+		B_address = {} 		--sg.stargateAddress.Milky Way
+		end
+		if gate_type == "Pegasus" then
+		B_address = {} 		--sg.stargateAddress.Pegasus
+		end
+		if gate_type == "Universe" then
+		B_address = {} 		--sg.stargateAddress.Universe
+		end
+		if data == "M_Address" then
+			--monitor.write(textutils.serialize(sg.stargateAddress.Milky Way))
+			--B_address[8] = "Point of Origin"
+		end
+		if data == "P_Address" then
+			--monitor.write(textutils.serialize(sg.stargateAddress.Pegasus))
+			--B_address[8] = "Subido"
+		end
+		if data == "U_Address" then
+			--monitor.write(textutils.serialize(sg.stargateAddress.Universe))
+			--B_address[8] = "G17"
+		end
+		B_address[9] = "Blank"
+		B_address[10] = "Send"
+		--S_address = textutils.serialize(B_address)
+		--monitor.write(S_address)
+	end
+	if data == "quit" then
+		buttonAPI.clearTable()
+		buttonAPI.fillTable()
+		buttonAPI.heading(header)
+		busy = false
+		return
+	end
+	os.sleep(5)
+	print_error(5)
+	goto Manuel_Top
+
+end
+
+function Button12()
+	Beamer_Address_Read()
+	gate_address = Beamer_Address
+	Abort = false
+	input = "Beamer"
+	button = false
+	Beamer_Bool = true
+end
+
+function Button1_3()
+	error_check = true
+	busy = true
+	gate_address = {}
+	if not save_this_address then
+		Address_Read()
+	end
+	looking = true
+	fill_data = false
+	name_pos = 10
+	while looking do
+		os.sleep(0.1)
+		if gate_address[name_pos] == nil then
+			looking = false
+			num_addresses = (name_pos / 10) - 1
+		end
+		name_pos = name_pos + 10
+	end
+	v, k = term.getCursorPos()
+	gate_address_add = {}
+	for i = 1, 10 do
+		buttonAPI.clearTable()
+		buttonAPI.fillTable()
+		monitor.setCursorPos(1,1)
+		if monitorWidth > 64 then
+			monitor.write("Type (quit) to cancel, Must include PoO as 7,8 or 9th Chevron!")
+		else
+			monitor.write("Type (quit) to cancel, Must include PoO as 7,8")
+			local x, y = monitor.getCursorPos()
+			monitor.setCursorPos(1, y+1)
+			monitor.write("or 9th Chevron!")
+		end
+		if i < 10 then
+			local x, y = monitor.getCursorPos()
+			monitor.setCursorPos(1,y+1)
+			monitor.write("Input Chevron: " .. i)
+		end
+		if i == 10 then
+			local x, y = monitor.getCursorPos()
+			monitor.setCursorPos(1, y+1)
+			monitor.write("Input Address Name: ")
+		end
+		local x, y = monitor.getCursorPos()
+		monitor.setCursorPos(1, y+1)
+		monitor.write("                     ")
+		monitor.setCursorPos(1, y+1)
+		place_holder = (num_addresses + 1) * 10
+		::retry::
+		if fill_data == false then
+			print("                ")
+			term.setCursorPos(1,1)
+			data = io.read()
+		end
+		if data == "quit" then
+			screen_reset_full()
+			busy = false
+			return
+		end
+		if error_check then
+			check = true
+		else
+			check = false
+		end
+		check_num = 1
+		term.setCursorPos(1,1)
+		while check do
+			if i ~= 10 then
+				if not fill_data then
+					if gate_type == "Milky Way" then
+						if data == Valid_Symbols_MW[check_num] then
+							check = false
+							check_num = 1
+						end
+						if check_num >= 39 then
+							print_error(3)
+							os.sleep(5)
+							print_error(0)
+							goto retry
+							return
+						end
+					end
+					if gate_type == "Pegasus" then
+						if data == Valid_Symbols_PG[check_num] then
+							check = false
+							check_num = 1
+						end
+						if check_num >= 36 then
+							print_error(3)
+							os.sleep(5)
+							print_error(0)
+							goto retry
+							return
+						end
+					end
+					if gate_type == "Universe" then
+						if data == Valid_Symbols_UN[check_num] then
+							check = false
+							check_num = 1
+						end
+						if check_num >= 36 then
+							print_error(3)
+							os.sleep(5)
+							print_error(0)
+							goto retry
+							return
+						end
+					end
+				end
+			end
+			check_num = check_num + 1
+			if check_num > 40 then
+				print_error(4)
+				os.sleep(5)
+			end
+		end
+		if data == "Point of Origin" or data == "Subido" or data == "G17" then
+			error_check = false
+			if gate_type == "Pegasus" then
+				data = "Subido"
+			end
+			if gate_type == "Universe" then
+				data = "G17"
+			end
+			if fill_data == false then
+				table.insert(gate_address_add, data)
+			else
+				table.insert(gate_address_add, "blank")
+			end
+			if i < 9 then
+				fill_data = true
+			else 
+				fill_data = false
+				data = nil
+			end
+		else
+			table.insert(gate_address_add, data)
+		end
+	end
+	
+	monitor.write(textutils.serialize(gate_address_add))
+	os.sleep(1)
+	if getTableSize(gate_address_add) ~= 10 then
+		print_error(3)
+		os.sleep(5)
+		screen_reset_full()
+		busy = false
+		return
+	end
+	for i = 1, 10 do
+		table.insert(gate_address, gate_address_add[i])
+	end
+	monitor.setCursorPos(v,k)
+	if save_this_address then
+		file=fs.open("disk/This_Gate_Address.txt","w")
+		file.write(textutils.serialize(gate_address_add))
+	else
+		file=fs.open("disk/Address.txt","w")
+		file.write(textutils.serialize(gate_address))
+	end
+	file.close()
+	screen_reset_full()
+	busy = false
+	term.setCursorPos(1,1)
+	save_this_address = false
+end
+
+function getTableSize(t)
+    local count = 0
+    for _, _ in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+
+function print_error(num_error)
+	v,k = monitor.getCursorPos()
+	if num_error > 0 then
+		monitor.setCursorPos((monitorWidth-string.len(Error_Text[num_error]))/2+1, monitorHeight - 1)
+		monitor.write(Error_Text[num_error])
+	else
+		erase_line = "                           "
+		monitor.setCursorPos((monitorWidth-string.len(erase_line))/2+1, monitorHeight - 1)
+		monitor.write("                           ")
+	end
+	monitor.setCursorPos(v,k)
+end
+
+function Iris_Health_Warning()
+	Dur = ((sg.getIrisDurability()):gsub("/1000", "")):gsub("/500", "")
+	if Dur == "0/0" then
+		Dur = "0"
+	end
+	Dur = tonumber(Dur)
+	if Dur ~= 0 then
+		if sg.getIrisType() == "IRIS_TITANIUM" then
+			Dur = Dur / 5
+		end
+		if sg.getIrisType() == "IRIS_TRINIUM" then
+			Dur = Dur / 10
+		end
+	end
+	
+	if sg.getIrisType() == "SHIELD" then
+		Dur = "SHIELD"
+	end
+	v, k = monitor.getCursorPos()
+	monitor.setCursorPos(1,4)
+	monitor.write("Iris Health:")
+	monitor.setCursorPos(13,4)
+	if sg.getIrisType() == "SHIELD" then
+		monitor.write(Dur)
+	else
+		monitor.write(Dur .. "%    ")
+	end
+	monitor.setCursorPos(v,k)
+	
+	if sg.getIrisState() == "OPENED" then
+		v, k = monitor.getCursorPos()
+		monitor.setCursorPos(1,5)
+		monitor.write("                 ")
+		monitor.setCursorPos(1,5)
+		monitor.write("Iris State:OPEN  ")
+		monitor.setCursorPos(v,k)
+	else
+		v, k = monitor.getCursorPos()
+		monitor.setCursorPos(1,5)
+		monitor.write("                 ")
+		monitor.setCursorPos(1,5)
+		monitor.write("Iris State:CLOSED")
+		monitor.setCursorPos(v,k)
+	end
+end
+
+function print_energy()
+	caps = sg.getCapacitorsInstalled()
+	Max_Energy = (caps + 1) * 17820000     --sg.getMaxEnergyStored()
+	Energy = Max_Energy --sg.getEnergyStored()
+	if Energy == nil then
+		Energy = 0
+	end
+	if Max_Energy == nil then
+		Max_Energy = 0
+	end
+	Energy_percent = (Energy / Max_Energy) * 10000
+	
+	Energy_percent_Fixed = (math.floor(Energy_percent+0.005)) / 100
+	
+	v, k = monitor.getCursorPos()
+	monitor.setCursorPos(1,2)
+	monitor.write("Stargate Energy:" .. Energy_percent_Fixed .. "%")
+	
+	
+	status_text = "Stargate Status:"
+	
+	monitor.setCursorPos(1,1)
+	
+	if not dialing then
+		if printed_state ~= sg.getGateStatus() then
+			for i = 1, string.len(printed_state) do
+				monitor.setCursorPos(string.len(status_text) + i,1)
+				monitor.write(" ")
+			end
+			monitor.setCursorPos(1,1)
+		end
+	end
+	
+	printed_state = sg.getGateStatus()
+	
+	
+	if dialing then
+		if printed_state ~= "idle" then
+			if printed_state == "open" then
+				if lock then
+					monitor.write(status_text .. "outgoing        ")
+				else
+					monitor.write(status_text .. printed_state .. "                ")
+				end
+			else
+				monitor.write(status_text .. printed_state .. "                ")
+			end
+		end
+	else
+		monitor.write(status_text .. sg.getGateStatus() .. "                ")
+	end
+	monitor.setCursorPos(1,3)
+	
+	if gate_time < 10 then
+		monitor.write("Gate Time:" .. (extra / 60) .. ":0")
+		monitor.setCursorPos(14,3)
+	else
+		monitor.write("Gate Time:" .. (extra / 60) .. ":")
+		monitor.setCursorPos(13,3)
+	end
+	max_gate_time_min = (max_gate_time_sec / 60)
+	if sg.getGateStatus() == "idle" then
+		gate_time = 0
+	end
+	monitor.write(gate_time .. "/" .. max_gate_time_min .. ":00  ")
+	monitor.setCursorPos(v,k)
+end
+
+
+function screen_reset()
+	term.setCursorBlink(false)
+	--buttonAPI.clearTable()
+	--buttonAPI.fillTable()
+	buttonAPI.heading(header)
+	monitor.setCursorPos(1,5)
+end
+
+function screen_reset_full()
+	term.clear()
+	buttonAPI.clearTable()
+	buttonAPI.fillTable()
+	buttonAPI.heading(header)
+end
+
+
+function Save_Last_Address()
+	file = fs.open("disk/Last Address.txt","w")
+	file.write(textutils.serialize(gate_address))
+	file.close()
+end
+
+function Last_Address_Read()
+	file = fs.open("disk/Last Address.txt","r")
+	text = file.readAll()
+	gate_address = textutils.unserialize(text)
+	file.close()
+end
+
+function Address_Read()
+	local file = fs.open("disk/Address.txt","r")
+	text = file.readAll()
+	gate_address = textutils.unserialize(text)
+	file.close()
+	if gate_address == nil then
+		gate_address = {}
+	end
+end
+
+function Code_Read()
+	local file = fs.open("disk/IRIS_CODE.txt","r")
+	local text = file.readAll()
+	code = textutils.unserialize(text)
+	file.close()
+end
+
+function Beamer_Code_Read()
+	local file = fs.open("disk/Auto_Beamer_CODE.txt","r")
+	local text = file.readAll()
+	code2 = textutils.unserialize(text)
+	file.close()
+end
+
+function Beamer_Address_Read()
+	local file = fs.open("disk/Auto_Beamer_Address.txt","r")
+	local text = file.readAll()
+	Beamer_Address = textutils.unserialize(text)
+	file.close()
+end
+
+function Erase_Data()
+	gate_address = {}
+	code = {}
+end
+
+function redstone_update()
+	if beamer_dial_in == false then
+		if redstone_Avail then
+			if redstone.getInput("front") then
+				Beamer_redial = true
+			else
+				Beamer_redial = false
+			end
+		end
+	end
+end
+
+function User_Input()
+	input_bool = true
+	p = 1
+	gate_address = {}
+	while input_bool == true do
+		os.sleep(0.1)
+		monitor.write("Chevron:",p)
+		hold = io.read()
+		if hold == "quit" then
+			Button6()
+			return
+		end
+		if  hold == "Point of Origin" then
+			input_bool = false
+		end
+		gate_address[p] = hold
+		text = textutils.serialize(gate_address)
+		p = p + 1
+	end
+	buttonAPI.clearTable()
+	buttonAPI.fillTable()
+	monitor.setCursorPos(1,4)
+end
+
+ if Alarm_Enable then
+  --A_API.SetAlarm(false)
+ end
+ 
+ 
+
+
+
+function Version_check()
+	term.setCursorPos(1,1)
+	fs.delete("Dialer_Version_Checker.txt") 
+	shell.run("pastebin get iKycwEVq Dialer_Version_Checker.txt")
+	term.clear()
+	term.setCursorPos(1,1)
+	buttonAPI.clearTable()
+	buttonAPI.fillTable()
+	file = fs.open("Dialer_Version_Checker.txt","r")
+	text = file.readAll()
+	Version = textutils.unserialize(text)
+	file.close()
+	if header ~= Version then
+		v, k = term.getCursorPos()
+		monitor.setCursorPos((monitorWidth/2) - 10,monitorHeight - 1)
+		monitor.write("New Update Available!")
+		monitor.setCursorPos(v,k)
+	end
+	buttonAPI.heading(header)
+end
+
+function Beamer_time_limit()
+	if broadcasting then
+		v, k = term.getCursorPos()
+		monitor.setCursorPos(1,4)
+		--monitor.write(time_start)
+		os.sleep(0.1)
+		time_start = time_start + 1
+		monitor.setCursorPos(v,k)
+		if sg.getGateStatus() == "open" then
+			if Sent2 == false then
+				m.broadcast(code2, "Open")
+				Sent2 = true
+			end
+		end
+		if Energy_percent_Fixed < 90 then
+			if sg.getGateStatus() == "open" then
+				if current_gate_time > 60 then
+					m.broadcast(code2, "Deactivating")
+					broadcasting = false
+					Button6()
+					time_start = 0
+				end
+			end
+		end
+		if time_start > 200 then
+			m.broadcast(code2, "Deactivating")
+			broadcasting = false
+			Button6()
+			time_start = 0
+		end
+	end
+end
+
+function max_time()
+	--current_gate_time = current_gate_time + 1
+	_, _, _, gate_time = sg.getOpenedTime()
+	gate_time = tonumber(gate_time)
+	if gate_time == nil then
+		gate_time = 0
+	end
+	if gate_time == 0 then
+		flag1 = false
+		flag2 = true
+	end
+	if gate_time == 59 then
+		flag1 = true
+	end
+	if flag1 then
+		if flag2 then
+			extra = extra + 60
+			flag1 = false
+			flag2 = false
+		end
+	end
+	current_gate_time = gate_time + extra
+	if current_gate_time > max_gate_time_sec then
+		if lock then
+			Button6()
+			current_gate_time = 0
+		end
+	end
+end
+
+
+
+function gate_spin()
+	os.sleep(1.0)
+	while sg.getGateStatus() ~= "idle" do
+		os.sleep(0.1)
+		set_alarm()
+	end
+end
+
+
+function Glyph_Status()
+	current_glyph = sg.dialedAddress
+	current_glyph = current_glyph:gsub("[[]", "{\""):gsub(", ", "\",\""):gsub("]", "\"}")
+	current_glyph = current_glyph:gsub('{""}', "{}")
+	current_glyph = textutils.unserialize(current_glyph)
+	if textutils.serialize(current_glyph) == "{}" then
+		glyph_dialed = 0
+	else
+		glyph_dialed = getTableSize(current_glyph)
+	end
+end
+
+
+	
+
+
+function getClick()
+	if busy == false then
+	parallel.waitForAny(
+		function()
+			local event, touch, xs, ys = os.pullEvent("monitor_touch")
+			if xs ~= nil and ys ~= nil then
+				if xs ~= true and xs ~= false and ys ~= true and ys ~= false then
+					buttonAPI.checkxy(xs,ys)
+				end
+			end
+		end,
+		function()
+			event, wireless, check_code, from, message = os.pullEvent("modem_message")
+			busy = true
+			term.setCursorPos(1,1)
+			monitor.setCursorPos(1,6)
+			if message == "Open" then 
+				m.transmit(code, code, "Iris State: Open")
+				Sent = true
+				Override = true
+				monitor.write("Data From: " .. from .. ", Command: " .. message)
+			end
+			if message == "Check" then
+				m.transmit(code, code, sg.getIrisState())
+			end
+			if message == "Close" then
+				time_start = 1000
+				monitor.setCursorPos(1,7)
+				m.transmit(code, code, "Deactivating")
+				monitor.write("Deactivating")
+				sg.disengageGate()
+				monitor.setCursorPos(v,k)
+			end
+			message = ""
+			busy = false
+		end,
+		function()
+			sleep(0.1)
+			if Alarm_Enable then
+				buttonAPI.toggleButton("Alarm")
+			end
+			while loop do
+			while busy do
+				os.sleep(0.1)
+			end
+			
+			if not jump_forward then
+				Code_Read()
+				if not m.isOpen(code) then
+					term.setCursorPos(1,1)
+					m.open(code)
+				end
+				os.sleep(0.1)
+				::start::
+				Iris_Health_Warning()
+				print_energy()
+				set_alarm()
+				gate_status()
+				--auto_beamer()
+				--screen_reset()
+				redstone_update()
+
+
+				dialed = 1
+
+				if sg.getGateStatus() == "open" then
+					max_time()
+				end
+
+
+				monitorWidth2, monitorHeight2 = monitor.getSize()
+				if monitorWidth2 ~= monitorWidth then
+					os.reboot()
+				end
+				if monitorHeight2 ~= monitorHeight then
+					os.reboot()
+				end
+
+				if sg.getGateStatus() ~= "idle" then 
+					if Beamer_redial == false then
+						beamer_dial_in = false
+					end
+				else
+					extra = 0
+					once = true
+					current_gate_time = 0
+					engage = true
+					if waiting == false then
+						broadcasting = false
+					end
+
+					Iris_mode = Iris_mode_hold
+					Sent = false
+					Sent2 = false
+					dialing_out = false
+					if Beamer_redial then
+						waiting = true
+						Button12()
+						Beamer_redial = false
+						beamer_dial_in = true
+					end
+					Override = false
+				end
+
+				if sg.getGateStatus() == "open" then 
+					waiting = false
+				end
+
+
+				if once2 then
+					once2 = false
+				end
+
+
+				if sg.getGateStatus() == "incoming" then 
+					if once then
+						buttonAPI.clearTable()
+						buttonAPI.fillTable()
+						buttonAPI.heading(header)
+						once = false
+					end
+				end
+
+				os.sleep(0.1)
+			end
+			while input == "disk" or input == "buffer" or input == "redial" or input == "Beamer" do
+				jump_forward = true
+				if sg.getGateStatus() == "incoming" then 
+					Button6()
+				end
+
+				if input == "Beamer" then
+					if sg.getIrisState() == "CLOSED" then 
+						sg.toggleIris()
+					end
+					Override = true
+				end
+
+				if sg.getGateStatus() == "idle" then
+					type_not_received = true
+					if input == "disk" then
+						Address_Read()
+					end
+					if input == "redial" then
+						Last_Address_Read()
+					end
+					if input == "Beamer" then
+						if Beamer_redial == true then
+							Beamer_Address_Read()
+							gate_address = Beamer_Address
+						end
+					end
+				end
+				
+				if dialing == false then 
+					monitor.setCursorPos(1,7)
+				end
+				dialing = true
+				v, k = monitor.getCursorPos()
+				monitor.setCursorPos(1,6)
+				if Abort == false then
+					if input ~= buffer and input ~= redial and input ~= beamer then
+						looking3 = true
+						looking4 = true
+						pos = 1
+						while (looking3) do
+							os.sleep(0.1)
+							Print_table[pos] = gate_address[pos + offset]
+							if gate_address[pos + offset] == "Point of Origin" or gate_address[pos + offset] == "Subido" or gate_address[pos + offset] == "G17" then
+								looking3 = false
+							end
+							pos = pos + 1
+							os.sleep(0.1)
+						end
+						name_display = ""
+						while (looking4) do
+							os.sleep(0.1)
+							Print_table[pos] = gate_address[pos + offset]
+							if pos == 10 then
+								looking4 = false
+								name_display = Print_table[pos]
+							end
+							pos = pos + 1
+						end
+					end
+					monitor.write("Reading Address: " .. name_display)
+					--monitor.write(textutils.serialize(Print_table))
+					
+				end
+				::DHD_FAST::
+				Iris_Health_Warning()
+				Beamer_time_limit()
+				print_energy()
+				set_alarm()
+				monitor.setCursorPos(v,k)
+				if Abort == false then 
+					if dialed ~= nil then
+						monitor.setCursorPos(1,6+dialed)
+						monitor.write("Chevron: " ..dialed.. " is: " ..gate_address[dialed + offset])
+					end
+				end
+				if input ~= "null" then
+						
+					if not peripheral.find("jsg:dhd_milkyway") then
+							dhd = false
+					end
+					if dhd == false then
+						if engage then
+							sg.engageSymbol(gate_address[dialed + offset])
+						end
+					else
+						if engage then
+							p_dhd.pressButton(gate_address[dialed + offset])
+						end
+						if gate_type == "Milky Way" then
+							while sg.getGateStatus() ~= "idle" do os.sleep(0.1) set_alarm() Glyph_Status() end
+						else
+							while glyph_dialed ~= dialed do os.sleep(0.1) set_alarm() Glyph_Status() end
+						end
+					end
+					if gate_address[dialed + offset] == "Point of Origin" then
+						engage = false
+						while sg.getGateStatus() ~= "idle" do os.sleep(0.1) print_energy() end
+						sg.engageGate()
+						lock = true
+					end
+					if gate_address[dialed + offset] == "Subido" then
+						engage = false
+						while sg.getGateStatus() ~= "idle" do os.sleep(0.1) print_energy() end
+						os.sleep(1.0)
+						sg.engageGate()
+						lock = true
+						os.sleep(1.0)
+					end
+					if gate_address[dialed + offset] == "G17" then
+						engage = false
+						while sg.getGateStatus() ~= "idle" do os.sleep(0.1) print_energy() end
+						os.sleep(1.0)
+						sg.engageGate()
+						lock = true
+						os.sleep(1.0)
+					end
+					if lock then
+						dialing = true
+						save_gate_address = {}
+						for i = 1, 10 do
+							table.insert(save_gate_address, gate_address[i])
+						end
+						file=fs.open("disk/Last Address.txt","w")
+						file.write(textutils.serialize(save_gate_address))
+						file.close()
+						v, k = monitor.getCursorPos()
+						for i = 1, 10 do 
+							monitor.setCursorPos(1,5 + i)
+							monitor.write("                              ")
+						end
+						monitor.setCursorPos(v,k)
+						--[[if sg.getGateStatus() == "failing" then
+							if input == "disk" then
+								dialed = 1
+								buttonAPI.clearTable()
+								buttonAPI.fillTable()
+								buttonAPI.heading(header)
+								os.sleep(2)
+								goto start
+							end
+							if input == "Beamer" then
+								os.Shutdown() 
+							end
+						end]]
+					else
+						while sg.getGateStatus() ~= "idle" do os.sleep(0.1) set_alarm() print_energy() end
+					end
+						while lock do
+							busy = false
+							os.sleep(0.1)
+							once2 = true
+							if iris_open_bool then
+								--m.broadcast(code2, "Open")
+							end
+							Iris_mode = "normal"
+							if sg.getIrisState() == "CLOSED" then 
+								sg.toggleIris()
+							end
+							print_energy()
+							Iris_Health_Warning()
+							Beamer_time_limit()
+							auto_beamer()
+							max_time()
+							
+							if Beamer_Bool then
+								Beamer_Code_Read()
+								while type_not_received do
+									os.sleep(0.1)
+									m.broadcast(code2, "Type")
+									os.sleep(0.1)
+									auto_beamer()
+									print_energy()
+								end
+								monitor.write("Beamer Gate Type: " .. beamer_gate_type)
+								os.sleep(5)
+								if beamer_gate_type == "Milky Way" then
+									B_address = {}			--sg.stargateAddress.Milky Way
+									--B_address[8] = "Point of Origin"
+								end
+								if beamer_gate_type == "Pegasus" then
+									B_address = {}			-- sg.stargateAddress.Pegasus
+									--B_address[8] = "Subido"
+								end
+								if beamer_gate_type == "Universe" then
+									B_address = {}			-- sg.stargateAddress.Universe
+									--B_address[8] = "G17"
+								end
+								file = fs.open("disk/This_Gate_Address.txt","r")
+								text = file.readAll()
+								B_address = textutils.unserialize(text)
+								file.close()
+								
+								
+								B_address[9] = "Blank"
+								B_address[10] = "Send"
+								S_address = textutils.serialize(B_address)
+								monitor.write(S_address)
+								Beamer_Code_Read()
+								m.broadcast(code2, S_address)
+								Beamer_Bool = false
+								os.sleep(5)
+								Button6()
+								gate_address = {}
+								Beamer_redial = false
+							end
+							if sg.getGateStatus() == "idle" then
+								Abort = true
+								dialing = false
+								buttonAPI.clearTable()
+								buttonAPI.fillTable()
+								buttonAPI.heading(header)
+								set_alarm()
+								input = "null"
+								gate_address = {}
+								table1 = {}
+								lock = false
+								button = true
+								dialed = 1
+								os.sleep(1)
+								jump_forward = false
+							end
+						end
+						if gate_address[dialed + offset] ~= "Point of Origin" then
+							inv = false
+							if gate_address[dialed + offset] ~= "Subido" then
+								inv = false
+								if gate_address[dialed + offset] ~= "G17" then
+									inv = false
+								end
+							end
+						end
+						if gate_address[dialed + offset] == "Point of Origin" then
+							inv = true
+						end
+						if gate_address[dialed + offset] == "Subido" then
+							inv = true
+						end
+						if gate_address[dialed + offset] == "G17" then
+							inv = true
+						end
+						
+						if inv == false then
+							dialed = dialed + 1
+							if dhd == true then
+								goto DHD_FAST
+							end
+							if sg.getGateStatus() == "failing" then 
+								if broadcasting ~= true then
+									Button6() 
+									Abort = true 
+								end
+							end
+						end
+				end
+			end
+			--end of loop
+			end
+		end
+	)
+	end
+end 
+function getClick2()
+	parallel.waitForAny(
+		function()
+			::click_again::
+			dial_print_offset = 0
+			dial_print_vertical_offset = 0
+			local event, touch, xs, ys = os.pullEvent("monitor_touch")
+			if xs ~= nil and ys ~= nil then
+				if xs ~= true and xs ~= false and ys ~= true and ys ~= false then
+					if num_addresses > 20 then 
+						f = (num_addresses / 2) + 1
+					else
+						f = 10
+					end
+					for i = 1, num_addresses do
+						if i > f then
+							dial_print_offset = max_address_width
+							dial_print_vertical_offset = f
+						end
+						if xs <= max_address_width then
+							x_offset = 0
+							y_offset = 0
+						else
+							x_offset = max_address_width + 2
+							y_offset = 10
+						end
+						
+						if xs + x_offset <= max_address_width + x_offset then 
+							data = gate_address[(ys - 1 + y_offset) * 10]
+							return
+						end
+					end
+				end
+			end
+			goto click_again 
+		end,
+		function()
+			local event, touch, xs, ys = os.pullEvent("monitor_touch")
+			if xs ~= nil and ys ~= nil then
+				if xs ~= true and xs ~= false and ys ~= true and ys ~= false then
+					buttonAPI.checkxy(xs,ys)
+				end
+			end
+		end
+	)
+end 
+
+
+--[[
+function getClick()
+	local event, touch, xs, ys = os.pullEvent("monitor_touch")
+	if xs ~= nil and ys ~= nil then
+		if xs ~= true and xs ~= false and ys ~= true and ys ~= false then
+			buttonAPI.checkxy(xs,ys)
+		end
+	end
+end ]]
+-------------------------------------------------------------
+
+
+
+Version_check()
+while 1 do
+	getClick()
+end
